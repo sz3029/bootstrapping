@@ -6,6 +6,7 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(patchwork)
 library(p8105.datasets)
 
 set.seed(1)
@@ -56,10 +57,22 @@ lm(y ~ x, data = sim_df_nonconst) %>%
   #knitr::kable(digits = 3)
 ```
 
-## Drawing one bootstrap sample
+## Let's try use the bootstrap
+
+```{r}
+bootstrap_sample <-
+  sim_df_nonconst %>%
+  sample_frac(size = 1, replace = TRUE) %>%
+  arrange(x)
+
+lm(y~x, data = bootstrap_sample)
+```
+
+Let's write it as a function
 
 ```{r}
 boot_sample = function(df) {
+  # KEY With replacement
   sample_frac(df, replace = TRUE)
 }
 ```
@@ -81,7 +94,90 @@ boot_straps =
 boot_straps
 ```
 
+From here..., things are kinda the same as "always"
 
+```{r}
+boot_straps_results <-
+  boot_straps %>%
+  mutate(
+    models = map(.x = strap_sample, ~lm(y~x, data = .x)),
+    results = map(models, broom::tidy)
+  ) %>%
+  select(strap_number, results) %>%
+  unnest(results)
+```
+
+```{r}
+boot_straps_results %>%
+  ggplot(aes(x = estimate)) +
+  geom_histogram() +
+  facet_grid(~term, scales = "free")
+
+lm(y~x, data = sim_df_nonconst) %>%
+  broom::tidy()
+
+boot_straps_results %>%
+  group_by(term) %>%
+  summarize(
+    se = sd(estimate)
+  )
+```
+
+```{r}
+sim_df_const %>% 
+  modelr::bootstrap(n = 1000) %>% 
+  mutate(models = map(strap, ~lm(y ~ x, data = .x) ),
+         results = map(models, broom::tidy)) %>% 
+  select(-strap, -models) %>% 
+  unnest(results) %>% 
+  group_by(term) %>% 
+  summarize(boot_se = sd(estimate))
+```
+
+```{r}
+data("nyc_airbnb")
+
+nyc_airbnb = 
+  nyc_airbnb %>% 
+  mutate(stars = review_scores_location / 2) %>% 
+  rename(
+    boro = neighbourhood_group,
+    neighborhood = neighbourhood) %>% 
+  filter(boro != "Staten Island") %>% 
+  select(price, stars, boro, neighborhood, room_type)
+```
+
+```{r}
+nyc_airbnb %>% 
+  ggplot(aes(x = stars, y = price, color = room_type)) + 
+  geom_point()
+```
+
+```{r}
+gg_density <-
+  nyc_airbnb %>% 
+  filter(boro == "Manhattan") %>% 
+  modelr::bootstrap(n = 1000) %>% 
+  mutate(
+    models = map(strap, ~ lm(price ~ stars + room_type, data = .x)),
+    results = map(models, broom::tidy)) %>% 
+  select(results) %>% 
+  unnest(results) %>% 
+  filter(term == "stars") %>% 
+  ggplot(aes(x = estimate)) + geom_density()
+```
+
+```{r}
+gg_scatter <-
+  nyc_airbnb %>%
+  filter(boro == "Manhattan") %>%
+  ggplot(aes(x = stars, y = price)) +
+  geom_point()
+
+(gg_scatter + gg_density)
+```
+
+Not a normal ditribution
 
 
 
