@@ -177,7 +177,7 @@ gg_scatter <-
 (gg_scatter + gg_density)
 ```
 
-Not a normal ditribution
+Not a normal distribution (more skewness on left)
 
 
 
