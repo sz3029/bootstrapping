@@ -1,0 +1,87 @@
+---
+title: "bootstrapping"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(p8105.datasets)
+
+set.seed(1)
+```
+
+## Bootsrapping in SLR
+
+```{r bootstrapping}
+n_samp = 250
+
+sim_df_const = 
+  tibble(
+    x = rnorm(n_samp, 1, 1),
+    error = rnorm(n_samp, 0, 1),
+    y = 2 + 3 * x + error
+  )
+
+sim_df_nonconst = sim_df_const %>% 
+  mutate(
+  error = error * .75 * x,
+  y = 2 + 3 * x + error
+)
+```
+
+Usual linear regression assumptions hold and one case in which they don’t
+
+```{r}
+sim_df = 
+  bind_rows(const = sim_df_const, nonconst = sim_df_nonconst, .id = "data_source") 
+
+sim_df %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(alpha = .5) +
+  stat_smooth(method = "lm") +
+  facet_grid(~data_source) 
+```
+
+
+```{r}
+lm(y ~ x, data = sim_df_const) %>% 
+  broom::tidy() %>% 
+  knitr::kable(digits = 3)
+```
+
+```{r}
+lm(y ~ x, data = sim_df_nonconst) %>% 
+  broom::tidy() %>% 
+  knitr::kable(digits = 3)
+```
+
+## Drawing one bootstrap sample
+
+```{r}
+boot_sample = function(df) {
+  sample_frac(df, replace = TRUE)
+}
+```
+
+```{r}
+boot_sample(sim_df_nonconst) %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point(alpha = .5) +
+  stat_smooth(method = "lm")
+```
+
+```{r}
+boot_straps = 
+  data_frame(
+    strap_number = 1:1000,
+    strap_sample = rerun(1000, boot_sample(sim_df_nonconst))
+  )
+
+boot_straps
+```
+
+
+
+
+
