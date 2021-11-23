@@ -46,14 +46,14 @@ sim_df %>%
 
 ```{r}
 lm(y ~ x, data = sim_df_const) %>% 
-  broom::tidy() %>% 
-  knitr::kable(digits = 3)
+  broom::tidy() #%>% 
+  #knitr::kable(digits = 3)
 ```
 
 ```{r}
 lm(y ~ x, data = sim_df_nonconst) %>% 
-  broom::tidy() %>% 
-  knitr::kable(digits = 3)
+  broom::tidy() #%>% 
+  #knitr::kable(digits = 3)
 ```
 
 ## Drawing one bootstrap sample
